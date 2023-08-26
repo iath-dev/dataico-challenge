@@ -2,8 +2,7 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.data.json :as json]
             [invoice-spec :as spec]
-            [cheshire.core :as c]
-            [clojure.edn :as edn])
+            [clojure.walk :as walk])
   (:gen-class))
 
 ; Problem 1
@@ -58,20 +57,27 @@
 
 ; Problem 2
 
+; TODO Couldn't transform the [invoice] element in a valid element
 (defn json-invoice
-  "Get invoice data from the json"
+  "Validate invoice item inside a json file"
   ([]
    (println "Missing file name - using the \"invoice.json\" as default")
    (json-invoice "invoice.json"))
   ([file]
-    (def -json (->> file (slurp) (json/read-str) (into {})))
-    ;(def -json (->> file (slurp) (c/parse-string)))
-    ;(def -json (->> file (slurp) (json/read-str) (into {}) (prn-str)))
-    (println -json)
-    (println (s/explain ::spec/invoice -json))
+    (def -json (->> file (slurp) (json/read-str) (walk/keywordize-keys) (:invoice)))
+    (print "Validation result -> ")
     (s/valid? ::spec/invoice -json)))
 
 (defn -main
   "Project Main"
-  [& args]
-  (println args))
+  ([]
+   (println "Missing input: executing first solution")
+   (-main 1 "invoice.json"))
+  ([option]
+   (println "Missing filename: if the option is 2 the filename will be invoice.json by default")
+   (-main option "invoice.json"))
+  ([option file]
+    (case option
+      "1" (println (filtrate-item))
+      "2" (println (json-invoice file))
+      (println "Invalid input: the valid options are 1 or 2"))))
