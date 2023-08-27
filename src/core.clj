@@ -1,11 +1,12 @@
 (ns core
   (:require [clojure.spec.alpha :as s]
+            [clojure.string :as string]
             [clojure.data.json :as json]
             [invoice-spec :as spec]
             [clojure.walk :as walk])
   (:gen-class))
 
-; Problem 1
+;;; Problem 1
 
 (def filename "invoice.edn")                                ; Invoice EDN filepath
 (def invoice (->> filename (slurp) (clojure.edn/read-string)))    ; Invoice element
@@ -55,18 +56,39 @@
    (println "Search results:")
    (->> invoice (:invoice/items) (filter val-item) (filter check-duplicate))))
 
-; Problem 2
+;;; Problem 2
+(defn key-namespace
+  [p c]
+  (str (keyword (name p) (name c))))
 
-; TODO Couldn't transform the [invoice] element in a valid element
+(defn map-key
+  ([key]
+   (keyword (string/replace key #"_" "-")))
+  ([key value]
+   (->> value (walk/prewalk (fn [x] (if (keyword? x) (key-namespace key x) x))))))
+
+(defn map-value
+  [key value]
+  (cond
+    (map? value) (map-key key value)
+    (vector? value) (map-key key value)
+    (string? value) value
+    :default value))
+
+(comment
+  "For this problem I made the process of mapping the json object as well as possible (as my own challenge) but when
+  looking at the spec configuration I realized that the json inside the test will not go through the validation,
+  this is evidenced in the spec of the customer where the 'name' field is specified and the json object does not have
+  such a field")
 (defn json-invoice
   "Validate invoice item inside a json file"
   ([]
    (println "Missing file name - using the \"invoice.json\" as default")
    (json-invoice "invoice.json"))
   ([file]
-    (def -json (->> file (slurp) (json/read-str) (walk/keywordize-keys) (:invoice)))
+    (def -json (json/read-str (slurp file) :value-fn map-value :key-fn map-key))
     (print "Validation result -> ")
-    (s/valid? ::spec/invoice -json)))
+    (s/valid? ::spec/invoice (:invoice -json))))
 
 (defn -main
   "Project Main"
