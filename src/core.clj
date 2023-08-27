@@ -59,7 +59,7 @@
 ;;; Problem 2
 (defn key-namespace
   [p c]
-  (str (keyword (name p) (name c))))
+  (keyword (name p) (name c)))
 
 (defn map-key
   ([key]
@@ -86,7 +86,7 @@
    (println "Missing file name - using the \"invoice.json\" as default")
    (json-invoice "invoice.json"))
   ([file]
-    (def -json (json/read-str (slurp file) :value-fn map-value :key-fn map-key))
+    (def -json (-> file (slurp) (json/read-str :value-fn map-value :key-fn map-key)))
     (print "Validation result -> ")
     (s/valid? ::spec/invoice (:invoice -json))))
 
